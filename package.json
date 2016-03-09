@@ -1,0 +1,31 @@
+{
+  "name": "bower-version-checker",
+  "version": "0.0.1",
+  "author": "Jorge Prudencio <jorgepruden@gmail.com>",
+  "description": "Check your bower.json versions and search updates",
+  "keywords": [],
+  "preferGlobal": true,
+  "main": "./bower-version-checker",
+  "scripts": {},
+  "bin": {
+    "bower-version-checker": "./bin/bower-version-checker",
+    "bvc": "./bin/bvc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jpruden92/bower-version-checker.git"
+  },
+  "homepage": "https://github.com/jpruden92/bower-version-checker",
+  "dynamicDependencies": {
+    "bower": "^1.6.5"
+  },
+  "dependencies": {
+    "cint": "^8.2.1",
+    "bower-json": "^0.7.0",
+    "semver-utils": "^1.1.1",
+    "cli-table": "^0.3.1",
+    "node-alias": "^1.0.3",
+    "update-notifier": "^0.5.0",
+    "commander": "^2.9.0"
+  }
+}
