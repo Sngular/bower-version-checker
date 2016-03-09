@@ -3,6 +3,9 @@ var cint = require('cint');
 var bowerJson = require('bower-json');
 var semverUtils = require('semver-utils');
 var Table = require('cli-table');
+var copyDir = require('copy-dir');
+var process = require('process');
+var rmdir = require('rmdir');
 
 var table = new Table({
     head: ['Component name', 'New version', 'Local version'],
@@ -164,14 +167,27 @@ function programRun() {
 
       console.log('Dependencies that you can update :-)');
       console.log(table.toString());
+
+      finishEnvironment();
     });
 
   });
 }
 
+function initEnvironment() {
+  copyDir.sync(process.cwd(), './tmp');
+  process.chdir('./tmp');
+}
+
+function finishEnvironment() {
+  process.chdir('../');
+  rmdir('./tmp');
+}
+
 module.exports = {
   run: function (opts) {
     options = opts || {};
+    initEnvironment();
     programRun();
   }
 };
