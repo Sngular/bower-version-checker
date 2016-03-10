@@ -3,7 +3,7 @@
 ### Step 1:
 
 ```
-npm install https://github.com/jpruden92/bower-version-checker.git
+npm install -g https://github.com/jpruden92/bower-version-checker.git
 ```
 
 ### Step 2:
