@@ -1,16 +1,12 @@
 var bower = require('bower');
 var cint = require('cint');
 var bowerJson = require('bower-json');
+var semver = require('semver');
 var semverUtils = require('semver-utils');
 var Table = require('cli-table');
 var copyDir = require('copy-dir');
 var process = require('process');
 var rmdir = require('rmdir');
-
-var table = new Table({
-    head: ['Component name', 'New version', 'Local version'],
-    colWidths: [40, 20, 20]
-});
 
 /**
  * Return a Promise that resolves when 'bower list' command is finished.
@@ -112,12 +108,8 @@ function mapVersionInfo(localDependencies, remoteDependencies) {
  */
 
 function getDependencyVersion(link) {
-  if (link.indexOf('#') > -1 || link.indexOf('^') > -1 || link.indexOf('~') > -1) {
+  if (link.indexOf('#') > -1) {
     var version = link.split('#');
-    version = version[version.length - 1];
-    version = version.split('^');
-    version = version[version.length - 1];
-    version = version.split('~');
     version = version[version.length - 1];
     return version;
   } else {
@@ -126,20 +118,25 @@ function getDependencyVersion(link) {
 }
 
 /**
- * Compare two versions and return bigger
+ * Generate a table with versions that can be updated on bower
  */
 
-function compareVersions(localVersion, lastVersion) {
-  var localVersion = semverUtils.parse(localVersion);
-  var lastVersion = semverUtils.parse(lastVersion);
-  var versionResult = localVersion;
+function createDependenciesTable(versionInfo) {
+  var table = new Table({
+      head: ['Component name', 'New version', 'Local version'],
+      colWidths: [40, 20, 20]
+  });
 
-  if (localVersion.major < lastVersion.major || localVersion.minor < lastVersion.minor) {
-    versionResult = lastVersion;
-  }
+  versionInfo.forEach(function(component) {
+    if (component.localTarget) {
+      if (!semver.satisfies(component.lastVersion, component.localTarget)) {
+        table.push([component.name, '~' + component.lastVersion, component.localTarget]);
+      }
+    }
+  });
 
-  versionResult = semverUtils.stringify(versionResult);
-  return versionResult;
+  console.log('Dependencies that you can update :-)');
+  console.log(table.toString());
 }
 
 /**
@@ -156,28 +153,25 @@ function programRun() {
       var versionInfo = mapVersionInfo(results[0], results[1]);
       console.log('Creating updates table...');
 
-      versionInfo.forEach(function(component) {
-        if (component.localTarget) {
-          var correctVersion = compareVersions(component.localTarget, component.lastVersion);
-          if (component.localTarget !== correctVersion) {
-            table.push([component.name, '~' + correctVersion, component.localTarget]);
-          }
-        }
-      });
-
-      console.log('Dependencies that you can update :-)');
-      console.log(table.toString());
-
+      createDependenciesTable(versionInfo);
       finishEnvironment();
     });
 
   });
 }
 
+/**
+ * Create a temporal environment on 'tmp' folder
+ */
+
 function initEnvironment() {
   copyDir.sync(process.cwd(), './tmp');
   process.chdir('./tmp');
 }
+
+/**
+ * Destroy temporal environment
+ */
 
 function finishEnvironment() {
   process.chdir('../');

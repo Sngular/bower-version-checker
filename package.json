@@ -1,6 +1,6 @@
 {
   "name": "bower-version-checker",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "author": "Jorge Prudencio <jorgepruden@gmail.com>",
   "description": "Check your bower.json versions and search updates",
   "keywords": [],
@@ -22,10 +22,14 @@
   "dependencies": {
     "cint": "^8.2.1",
     "bower-json": "^0.7.0",
+    "semver": "^5.1.0",
     "semver-utils": "^1.1.1",
     "cli-table": "^0.3.1",
     "node-alias": "^1.0.3",
     "update-notifier": "^0.5.0",
-    "commander": "^2.9.0"
+    "commander": "^2.9.0",
+    "copy-dir": "^0.0.8",
+    "process": "^0.11.2",
+    "rmdir": "1.2.0"
   }
 }
