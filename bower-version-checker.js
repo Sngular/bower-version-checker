@@ -154,7 +154,9 @@ function programRun() {
       console.log('Creating updates table...');
 
       createDependenciesTable(versionInfo);
-      finishEnvironment();
+      finishEnvironment().then(function() {
+        process.exit();
+      });
     });
 
   });
@@ -165,8 +167,17 @@ function programRun() {
  */
 
 function initEnvironment() {
-  copyDir.sync(process.cwd(), './tmp');
-  process.chdir('./tmp');
+  console.log('Creating environment...');
+  return new Promise(function(resolve, reject) {
+    copyDir.sync(process.cwd(), './tmp');
+    try {
+      process.chdir('./tmp');
+      resolve();
+    }
+    catch (err) {
+      reject();
+    }
+  });
 }
 
 /**
@@ -174,14 +185,24 @@ function initEnvironment() {
  */
 
 function finishEnvironment() {
-  process.chdir('../');
-  rmdir('./tmp');
+  return new Promise(function(resolve, reject) {
+    try {
+      process.chdir('../');
+      rmdir('./tmp', function() {
+        resolve();
+      });
+    }
+    catch (err) {
+      reject();
+    }
+  });
 }
 
 module.exports = {
   run: function (opts) {
     options = opts || {};
-    initEnvironment();
-    programRun();
+    initEnvironment().then(function() {
+      programRun();
+    });
   }
 };
