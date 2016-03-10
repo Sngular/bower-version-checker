@@ -123,7 +123,7 @@ function getDependencyVersion(link) {
 
 function createDependenciesTable(versionInfo) {
   var table = new Table({
-      head: ['Component name', 'New version', 'Local version'],
+      head: ['Dependency name', 'New version', 'Local version'],
       colWidths: [40, 20, 20]
   });
 
