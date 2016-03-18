@@ -7,6 +7,9 @@ var Table = require('cli-table');
 var copyDir = require('copy-dir');
 var process = require('process');
 var rmdir = require('rmdir');
+var inquirer = require("inquirer");
+var fs = require('fs');
+var path = require('path');
 
 /**
  * Return a Promise that resolves when 'bower list' command is finished.
@@ -90,7 +93,7 @@ function obtainBowerData() {
 function mapVersionInfo(localDependencies, remoteDependencies) {
   var versionInfo = [];
 
-  for (key in localDependencies) {
+  for (var key in localDependencies) {
     var localInfoVersion = getDependencyVersion(localDependencies[key]);
 
     versionInfo.push({
@@ -126,17 +129,85 @@ function createDependenciesTable(versionInfo) {
       head: ['Dependency name', 'New version', 'Local version'],
       colWidths: [40, 20, 20]
   });
+  var questions = [];
+  var updatedDeps = 0;
+  var counter = 0;
 
   versionInfo.forEach(function(component) {
     if (component.localTarget) {
+      counter++;
       if (!semver.satisfies(component.lastVersion, component.localTarget)) {
         table.push([component.name, '~' + component.lastVersion, component.localTarget]);
+        questions.push({ type:"confirm", name:component.name, message:"Do you want to update dependency "+ component.name +" in bower.json with " + component.lastVersion + " version?", default:false});
+      } else {
+        table.push([component.name, 'UPDATED', component.localTarget]);
+        updatedDeps++;
       }
     }
   });
 
-  console.log('Dependencies that you can update :-)');
+  console.log('Dependencies to update');
   console.log(table.toString());
+
+  if ( updatedDeps === counter ) {
+    console.log("\nbower.json has its dependencies at the latest's version");
+  } else {
+    askUpdateDependencies(versionInfo, questions);
+  }
+}
+
+function askUpdateDependencies(versionInfo, questions) {
+  inquirer.prompt(questions, function(answers) {
+    updateBowerJson(versionInfo, answers);
+  });
+}
+
+function updateBowerJson(versionInfo, answers) {
+  var cont = fs.readFileSync("bower.json", 'utf8').split(/\n/);
+  var regExp;
+  var k;
+  var line;
+  var tmp;
+  versionInfo.forEach(function(component) {
+    if (component.localTarget) {
+      k = component.name;
+      if ( answers[k] ) {
+        regExp = new RegExp('"'+k+'"');
+        cont = cont.map(function(a,b,c){
+          if ( c[b].match(regExp) ) {
+            return c[b].replace(/#(\^?\~?)[0-9]*\.[0-9]*\.[0-9]*/, "#$1"+component.lastVersion);
+          } else {
+            return c[b];
+          }
+        });
+      }
+    }
+  });
+
+  cont = cont.join("\n");
+  console.log( "NEW BOWER:" );
+  console.log(cont);
+
+  inquirer.prompt([{ type:"confirm", name:"savebower", message:"Do you want to save a new 'bower.json'?", default:false}], function(answers) {
+    if (answers.savebower ) {
+      var currentDir = process.cwd().replace("tmp","");
+      console.log("currentDir " + currentDir);
+      inquirer.prompt([{ type:"confirm", name:"saveoldbower", message:"Do you want to save actual bower.json like '_bower.json.old' ?", default:false}], function(answers2) {
+        if ( answers2.saveoldbower ) {
+          console.log("move bower.json to _bower.json.old" );
+          fs.renameSync(currentDir+"bower.json", currentDir+"_bower.json.old");
+        }
+        if ( answers.savebower ){
+          console.log("...new bower.json saved");
+          fs.writeFileSync(currentDir + "bower.json", cont);
+        }
+
+        finishEnvironment().then(function() {
+          process.exit();
+        });
+      });
+    }
+  });
 }
 
 /**
@@ -152,11 +223,7 @@ function programRun() {
     obtainBowerData().then(function(results) {
       var versionInfo = mapVersionInfo(results[0], results[1]);
       console.log('Creating updates table...');
-
       createDependenciesTable(versionInfo);
-      finishEnvironment().then(function() {
-        process.exit();
-      });
     });
 
   });
