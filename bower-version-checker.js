@@ -19,16 +19,16 @@ var path = require('path');
 function getDependenciesInfo() {
   return new Promise(function (resolve, reject) {
     bower.commands.list()
-      .on('end', function (results) {
-        var dependencies = cint.mapObject(results.dependencies, function (key, value) {
-            return cint.keyValue(key, value.pkgMeta);
-        });
-        resolve(results.dependencies);
-      })
-      .on('error', function(e) {
-        console.error('Bower list error...', e);
-        reject();
+    .on('end', function (results) {
+      var dependencies = cint.mapObject(results.dependencies, function (key, value) {
+        return cint.keyValue(key, value.pkgMeta);
       });
+      resolve(results.dependencies);
+    })
+    .on('error', function(e) {
+      console.error('Bower list error...', e);
+      reject();
+    });
   });
 }
 
@@ -40,18 +40,18 @@ function getDependenciesInfo() {
 function parseLocalBower() {
   return new Promise(function (resolve, reject) {
     bowerJson.read('./bower.json', function (err, json) {
-        if (err) {
-            console.error('There was an error reading the file');
-            console.error(err.message);
-            reject();
-        }
+      if (err) {
+        console.error('There was an error reading the file');
+        console.error(err.message);
+        reject();
+      }
 
-        var deps = json.dependencies;
-        if (json.devDependencies) {
-          Object.assign(deps, json.devDependencies);
-        }
+      var deps = json.dependencies;
+      if (json.devDependencies) {
+        Object.assign(deps, json.devDependencies);
+      }
 
-        resolve(deps);
+      resolve(deps);
     });
   });
 }
@@ -63,13 +63,13 @@ function parseLocalBower() {
 function bowerInstall() {
   return new Promise(function (resolve, reject) {
     bower.commands.install([], { forceLatest: true })
-      .on('end', function (results) {
-        resolve();
-      })
-      .on('error', function(e) {
-        console.error('Bower install error...', e);
-        reject();
-      });
+    .on('end', function (results) {
+      resolve();
+    })
+    .on('error', function(e) {
+      console.error('Bower install error...', e);
+      reject();
+    });
   });
 }
 
@@ -95,7 +95,6 @@ function mapVersionInfo(localDependencies, remoteDependencies) {
 
   for (var key in localDependencies) {
     var localInfoVersion = getDependencyVersion(localDependencies[key]);
-
     versionInfo.push({
       name: key,
       lastVersion: remoteDependencies[key].versions[0],
@@ -122,115 +121,137 @@ function getDependencyVersion(link) {
 
 /**
  * Generate a table with versions that can be updated on bower
+ * @return a promise
  */
 
 function createDependenciesTable(versionInfo) {
-  var table = new Table({
+  return new Promise(function(resolve, reject) {
+    var table = new Table({
       head: ['Dependency name', 'New version', 'Local version'],
       colWidths: [40, 20, 20]
-  });
-  var questions = [];
-  var updatedDeps = 0;
-  var counter = 0;
+    });
+    var questions = [];
+    var updatedDeps = 0;
+    var counter = 0;
 
-  versionInfo.forEach(function(component) {
-    if (component.localTarget) {
-      counter++;
-      if (!semver.satisfies(component.lastVersion, component.localTarget)) {
-        table.push([component.name, '~' + component.lastVersion, component.localTarget]);
-        questions.push({ type:"confirm", name:component.name, message:"Do you want to update dependency "+ component.name +" in bower.json with " + component.lastVersion + " version?", default:false});
-      } else {
-        table.push([component.name, 'UPDATED', component.localTarget]);
-        updatedDeps++;
-      }
-    }
-  });
-
-  console.log('Dependencies to update');
-  console.log(table.toString());
-
-  if ( updatedDeps === counter ) {
-    console.log("\nbower.json has its dependencies at the latest's version");
-  } else {
-    askUpdateDependencies(versionInfo, questions);
-  }
-}
-
-function askUpdateDependencies(versionInfo, questions) {
-  inquirer.prompt(questions, function(answers) {
-    updateBowerJson(versionInfo, answers);
-  });
-}
-
-function updateBowerJson(versionInfo, answers) {
-  var cont = fs.readFileSync("bower.json", 'utf8').split(/\n/);
-  var regExp;
-  var k;
-  var line;
-  var tmp;
-  versionInfo.forEach(function(component) {
-    if (component.localTarget) {
-      k = component.name;
-      if ( answers[k] ) {
-        regExp = new RegExp('"'+k+'"');
-        cont = cont.map(function(a,b,c){
-          if ( c[b].match(regExp) ) {
-            return c[b].replace(/#(\^?\~?)[0-9]*\.[0-9]*\.[0-9]*/, "#$1"+component.lastVersion);
-          } else {
-            return c[b];
-          }
-        });
-      }
-    }
-  });
-
-  cont = cont.join("\n");
-  console.log( "NEW BOWER:" );
-  console.log(cont);
-
-  inquirer.prompt([{ type:"confirm", name:"savebower", message:"Do you want to save a new 'bower.json'?", default:false}], function(answers) {
-    if (answers.savebower ) {
-      var currentDir = process.cwd().replace("tmp","");
-      console.log("currentDir " + currentDir);
-      inquirer.prompt([{ type:"confirm", name:"saveoldbower", message:"Do you want to save actual bower.json like '_bower.json.old' ?", default:false}], function(answers2) {
-        if ( answers2.saveoldbower ) {
-          console.log("move bower.json to _bower.json.old" );
-          fs.renameSync(currentDir+"bower.json", currentDir+"_bower.json.old");
+    versionInfo.forEach(function(component) {
+      if (component.localTarget) {
+        counter++;
+        if (!semver.satisfies(component.lastVersion, component.localTarget)) {
+          table.push([component.name, '~' + component.lastVersion, component.localTarget]);
+          questions.push({ type:"confirm", name:component.name, message:"Do you want to update dependency "+ component.name +" in bower.json with " + component.lastVersion + " version?", default:false});
+        } else {
+          table.push([component.name, 'UPDATED', component.localTarget]);
+          updatedDeps++;
         }
-        if ( answers.savebower ){
-          console.log("...new bower.json saved");
-          fs.writeFileSync(currentDir + "bower.json", cont);
-        }
+      }
+    });
 
-        finishEnvironment().then(function() {
-          process.exit();
-        });
+    console.log('Dependencies to update');
+    console.log(table.toString());
+
+    if ( updatedDeps === counter ) {
+      console.log("\nbower.json has its dependencies at the latest's version");
+      resolve();
+    } else {
+      askUpdateDependencies(versionInfo, questions).then(function(){
+        resolve();
       });
     }
   });
 }
 
 /**
+ * Prompt to user the questions that are passed as a parameter
+ * @return a promise that is resolved when, taking into account the
+ * responses, the bower.json is updated
+ */
+
+function askUpdateDependencies(versionInfo, questions) {
+  return new Promise(function(resolve, reject){
+    inquirer.prompt(questions, function(answers) {
+      updateBowerJson(versionInfo, answers).then(function() {
+        resolve();
+      });
+    });
+});
+}
+
+/**
+ * Update bower.json file
+ * @return a promise that is resolved when the preferences about saving files
+ * have been answered, hence update bower.json
+ */
+
+function updateBowerJson(versionInfo, answers) {
+  return new Promise(function(resolve, reject) {
+    var cont = fs.readFileSync("bower.json", 'utf8').split(/\n/);
+    var regExp;
+    var k;
+    var line;
+    var tmp;
+    versionInfo.forEach(function(component) {
+      if (component.localTarget) {
+        k = component.name;
+        if ( answers[k] ) {
+          regExp = new RegExp('"'+k+'"');
+          cont = cont.map(function(a,b,c){
+            if ( c[b].match(regExp) ) {
+              return c[b].replace(/#(\^?\~?)[0-9]*\.[0-9]*\.[0-9]*/, "#$1"+component.lastVersion);
+            } else {
+              return c[b];
+            }
+          });
+        }
+      }
+    });
+
+    cont = cont.join("\n");
+    console.log( "NEW BOWER:" );
+    console.log(cont);
+
+    inquirer.prompt([{ type:"confirm", name:"savebower", message:"Do you want to save a new 'bower.json'?", default:false}], function(answers) {
+      if ( answers.savebower ) {
+        var currentDir = process.cwd().replace("tmp","");
+        console.log("\ncurrentDir " + currentDir);
+        inquirer.prompt([{ type:"confirm", name:"saveoldbower", message:"Do you want to save actual bower.json like '_bower.json.old' ?", default:false}], function(answers2) {
+          if ( answers2.saveoldbower ) {
+            console.log("move bower.json to _bower.json.old" );
+            fs.renameSync(currentDir+"bower.json", currentDir+"_bower.json.old");
+          }
+          if ( answers.savebower ){
+            console.log("...new bower.json saved");
+            fs.writeFileSync(currentDir + "bower.json", cont);
+          }
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+/**
  * Script starting function
+ * @return a promise
  */
 
 function programRun() {
   console.log('Doing bower install...');
-
-  bowerInstall().then(function() {
+  return bowerInstall().then(function() {
     console.log('Obtaining bower data...');
-
-    obtainBowerData().then(function(results) {
+    return obtainBowerData().then(function(results) {
       var versionInfo = mapVersionInfo(results[0], results[1]);
       console.log('Creating updates table...');
-      createDependenciesTable(versionInfo);
+      return createDependenciesTable(versionInfo);
     });
-
   });
 }
 
 /**
  * Create a temporal environment on 'tmp' folder
+ * @return a promise that could be either resolved or rejected if cannot create ./tmp folder
  */
 
 function initEnvironment() {
@@ -249,9 +270,11 @@ function initEnvironment() {
 
 /**
  * Destroy temporal environment
+ * @return a promise that could be either resolved or rejected if cannot remove ./tmp folder
  */
 
 function finishEnvironment() {
+  console.log('Cleaning environment...');
   return new Promise(function(resolve, reject) {
     try {
       process.chdir('../');
@@ -268,8 +291,20 @@ function finishEnvironment() {
 module.exports = {
   run: function (opts) {
     options = opts || {};
-    initEnvironment().then(function() {
-      programRun();
+
+    initEnvironment()
+    .then(function() {
+      return programRun();
+    })
+    .then(function() {
+      return finishEnvironment();
+    })
+    .catch(function(){
+      //but control+c still needs to be captured
+      return finishEnvironment();
+    })
+    .then(function(){
+      process.exit();
     });
   }
 };
