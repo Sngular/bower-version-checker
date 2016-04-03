@@ -186,20 +186,22 @@ function askUpdateDependencies(versionInfo, questions) {
 function updateBowerJson(versionInfo, answers) {
   return new Promise(function(resolve, reject) {
     var cont = fs.readFileSync("bower.json", 'utf8').split(/\n/);
-    var regExp;
+    var currentComponentToUpdate;
     var k;
     var line;
     var tmp;
+    var willChange;
     versionInfo.forEach(function(component) {
       if (component.localTarget) {
         k = component.name;
         if ( answers[k] ) {
-          regExp = new RegExp('"'+k+'"');
-          cont = cont.map(function(a,b,c){
-            if ( c[b].match(regExp) ) {
-              return c[b].replace(/#(\^?\~?)[0-9]*\.[0-9]*\.[0-9]*/, "#$1"+component.lastVersion);
+          currentComponentToUpdate = new RegExp('"'+k+'"');
+          cont = cont.map(function(bowerLine){
+            if ( bowerLine.match(currentComponentToUpdate) ) {
+              willChange = true;
+              return bowerLine.replace(/#(\^?\~?)[0-9]*\.[0-9]*\.[0-9]*/, "#$1"+component.lastVersion);
             } else {
-              return c[b];
+              return bowerLine;
             }
           });
         }
@@ -207,6 +209,10 @@ function updateBowerJson(versionInfo, answers) {
     });
 
     cont = cont.join("\n");
+    if (!willChange) {
+      console.log('..Skipping changes');
+      return resolve();
+    }
     console.log( "NEW BOWER:" );
     console.log(cont);
 
