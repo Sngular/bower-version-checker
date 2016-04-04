@@ -10,6 +10,13 @@ var rmdir = require('rmdir');
 var inquirer = require("inquirer");
 var fs = require('fs');
 var path = require('path');
+var readline = require("readline");
+
+process.on("SIGINT", function () {
+  finishEnvironment().then(function(){
+    process.exit();
+  });
+});
 
 /**
  * Return a Promise that resolves when 'bower list' command is finished.
@@ -147,7 +154,6 @@ function createDependenciesTable(versionInfo) {
       }
     });
 
-    console.log('Dependencies to update');
     console.log(table.toString());
 
     if ( updatedDeps === counter ) {
@@ -169,6 +175,18 @@ function createDependenciesTable(versionInfo) {
 
 function askUpdateDependencies(versionInfo, questions) {
   return new Promise(function(resolve, reject){
+
+    //inside inquirer SIGINT is not triggered because it already uses readline
+    //so we need to use explicit to capture and emit a SIGINT.
+    //It is defined here to improve the response time when typing ^c
+    var rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+    rl.on("SIGINT", function () {
+      process.emit("SIGINT");
+    });
+
     inquirer.prompt(questions, function(answers) {
       updateBowerJson(versionInfo, answers).then(function() {
         resolve();
@@ -306,7 +324,6 @@ module.exports = {
       return finishEnvironment();
     })
     .catch(function(){
-      //but control+c still needs to be captured
       return finishEnvironment();
     })
     .then(function(){

@@ -24,7 +24,6 @@ bower-version-checker
 Doing bower install...
 Obtaining bower data...
 Creating updates table...
-Dependencies that you can update :-)
 ┌────────────────────────────────────────┬────────────────────┬────────────────────┐
 │ Dependency name                        │ New version        │ Local version      │
 ├────────────────────────────────────────┼────────────────────┼────────────────────┤
@@ -47,7 +46,7 @@ NEW BOWER:
   "version": "0.2.4",
   "dependencies": {
     "example1": "https://mirepo/miruta/example1.git#~1.3.1",
-    "example2": "https://mirepo/miruta/example2.git#~1.0.1",
+    "example2": "https://mirepo/miruta/example2.git#~0.1.1",
     "example2": "https://mirepo/miruta/example3.git#~0.2.3",
     "polymer": "Polymer/polymer#~1.3.1"
   },
